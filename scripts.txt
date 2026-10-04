@@ -1,0 +1,3 @@
+# One line per script:  folder-name | Title shown on the home page
+# Serial numbers (01, 02, 03...) come from the order of the lines.
+01-ai-namma-job | AI Namma Job-ah Eduthukkuma?

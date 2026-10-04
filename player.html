@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Script</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0b1033;--blue:#2c4bff;--sky:#cfe0ff;--card:#fbfaf6;--tang:#ff7a29;--peach:#ffe2cc}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);background:var(--blue);min-height:100vh;
+ display:flex;justify-content:center;padding:clamp(12px,3vw,40px);position:relative;overflow-x:hidden}
+body::before{content:"";position:fixed;left:-12vmax;top:8vh;width:34vmax;height:34vmax;border-radius:50%;background:var(--tang);z-index:0}
+body::after{content:"";position:fixed;right:0;bottom:0;width:60vw;height:38vh;background:var(--sky);clip-path:polygon(0 38%,100% 0,100% 100%,0 100%);z-index:0}
+main{position:relative;z-index:1;width:100%;max-width:900px;display:flex;flex-direction:column;gap:clamp(14px,2.4vw,24px)}
+.card{background:var(--card);border:3px solid var(--ink);border-radius:26px;box-shadow:8px 8px 0 var(--ink)}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+@media(max-width:560px){.card{box-shadow:5px 5px 0 var(--ink);border-radius:20px}}
+
+html,body{height:100%}
+.back{align-self:flex-start;text-decoration:none;color:var(--ink);font-weight:800;padding:8px 16px;background:var(--sky);border:3px solid var(--ink);border-radius:14px;box-shadow:3px 3px 0 var(--ink)}
+.player{display:flex;align-items:center;gap:clamp(12px,2.4vw,22px);padding:clamp(14px,2.4vw,22px)}
+#play{flex:none;width:clamp(60px,9vw,80px);aspect-ratio:1;border-radius:20px;border:3px solid var(--ink);background:var(--tang);color:var(--ink);
+ box-shadow:4px 4px 0 var(--ink);display:grid;place-items:center;cursor:pointer;transition:transform .1s,box-shadow .1s}
+#play:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+#play:disabled{opacity:.45;cursor:wait}
+#play svg{width:42%;fill:currentColor}
+.track{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+h1{font-size:clamp(1.05rem,2.6vw,1.5rem);font-weight:800;line-height:1.15}
+.time{font-weight:800;font-size:clamp(.95rem,2vw,1.15rem);font-variant-numeric:tabular-nums}
+.time i{font-style:normal;font-weight:400;opacity:.55}
+#bar{-webkit-appearance:none;appearance:none;width:100%;height:14px;border:3px solid var(--ink);border-radius:99px;cursor:pointer;
+ background:linear-gradient(var(--blue),var(--blue)) 0/var(--p,0%) 100% no-repeat,var(--sky)}
+#bar::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--tang);border:3px solid var(--ink)}
+#bar::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--tang);border:3px solid var(--ink)}
+#box{height:clamp(340px,64dvh,680px);overflow-y:auto;padding:clamp(18px,3.4vw,38px);scroll-behavior:smooth;
+ font-size:clamp(1.3rem,1.05rem + 1.3vw,1.9rem);line-height:1.55;font-weight:500;-webkit-overflow-scrolling:touch}
+.l{display:block;margin-top:.35em}.l.br{margin-top:1.1em}.l:first-child{margin-top:0}
+.l.b{font-weight:800;border-left:6px solid var(--tang);padding-left:.6em}
+.w{opacity:.42;border-radius:8px;padding:1px 2px;cursor:pointer;transition:opacity .25s,background .25s}
+.w.done{opacity:1}.w.now{opacity:1;background:var(--peach);box-shadow:0 0 0 3px var(--peach)}
+.note{font-weight:500;opacity:.7}
+@media(prefers-reduced-motion:reduce){#box{scroll-behavior:auto}}
+</style></head><body><main>
+<a class="back" href="index.html">&larr; All scripts</a>
+<div class="card player">
+ <button id="play" aria-label="Play audio" disabled></button>
+ <div class="track"><h1 id="title">Loading...</h1>
+  <input id="bar" type="range" min="0" max="1000" value="0" aria-label="Seek">
+  <div class="time"><b id="cur">0:00</b> <i>/</i> <b id="tot">0:00</b></div></div>
+</div>
+<div class="card" id="box"><p class="note">Loading audio and syncing the text...</p></div>
+<audio id="audio" preload="auto"></audio>
+</main>
+<script>
+function parseScript(txt){
+  const out=[];let br=false;
+  txt.replace(/\r/g,"").split("\n").forEach(raw=>{
+    const l=raw.trim(); if(!l){br=true;return}
+    const b=l.length>2&&l.startsWith("*")&&l.endsWith("*");
+    out.push({t:b?l.slice(1,-1).trim():l.replace(/\*/g,""),b,br:br&&out.length>0});br=false;
+  });return out;
+}
+function findPauses(x,sr,D){
+  const hop=Math.max(1,Math.round(sr*0.01)),n=Math.floor(x.length/hop),db=new Float32Array(n);
+  for(let i=0;i<n;i++){let s=0;for(let k=i*hop;k<(i+1)*hop;k++)s+=x[k]*x[k];db[i]=20*Math.log10(Math.sqrt(s/hop)+1e-9)}
+  const srt=Float32Array.from(db).sort(),thr=srt[Math.floor(n*0.9)]-D,fr=hop/sr,P=[];
+  let a0=0,end=n*fr,i=0;
+  while(i<n){
+    if(db[i]<thr){let j=i;while(j<n&&db[j]<thr)j++;
+      if(j-i>=12){ if(i===0)a0=j*fr; else if(j===n)end=i*fr; else P.push([i*fr,j*fr]) }
+      i=j;
+    }else i++;
+  }
+  return{P,a0,end};
+}
+function align(x,sr,lines,D=13){
+  const {P,a0,end}=findPauses(x,sr,D),N=lines.length,M=P.length;
+  const chars=lines.map(l=>l.t.length),tot=chars.reduce((a,b)=>a+b,0);
+  const pd=P.map(p=>p[1]-p[0]),S=(end-a0)-pd.reduce((a,b)=>a+b,0);
+  let sp=[],pc=0;P.forEach(p=>{sp.push(p[0]-a0-pc);pc+=p[1]-p[0]});
+  const r=tot/S,cost=(i,j0,j1)=>{const d=(j1<M?sp[j1]:S)-(j0>=0?sp[j0]:0),e=chars[i]/r;
+    if(d<0.5*e)return 1e6;return (chars[i]+12)*Math.log((d+0.4)/(e+0.4))**2};
+  let starts,ends,used=new Set(),ok=N===1||M>=N-1,score=1e9;
+  if(ok&&N>1){
+    const INF=1e18,dp=[],bk=[];
+    for(let i=0;i<N-1;i++){dp.push(new Array(M).fill(INF));bk.push(new Array(M).fill(-1))}
+    for(let j=0;j<M;j++)dp[0][j]=cost(0,-1,j)-14*pd[j];
+    for(let i=1;i<N-1;i++)for(let j=0;j<M;j++)for(let k=0;k<j;k++)if(dp[i-1][k]<INF){
+      const v=dp[i-1][k]+cost(i,k,j)-14*pd[j];if(v<dp[i][j]){dp[i][j]=v;bk[i][j]=k}}
+    let bj=-1,bv=INF;for(let j=0;j<M;j++){const v=dp[N-2][j]+cost(N-1,j,M);if(v<bv){bv=v;bj=j}}
+    const ch=[bj];for(let i=N-2;i>0;i--){bj=bk[i][bj];ch.push(bj)}ch.reverse();
+    ch.forEach(j=>used.add(j));score=0;ch.forEach((j,i)=>{score+=cost(i,i?ch[i-1]:-1,j)});score+=cost(N-1,ch[N-2],M);
+    starts=[a0,...ch.map(j=>P[j][1])];ends=[...ch.map(j=>P[j][0]),end];
+  }else if(N===1){starts=[a0];ends=[end]}
+  else{ // fallback: proportional, no pauses
+    let c=0;starts=[];ends=[];lines.forEach((l,i)=>{starts.push(a0+(end-a0)*c/tot);c+=chars[i];ends.push(a0+(end-a0)*c/tot)});
+  }
+  const out=[];
+  lines.forEach((x,i)=>{
+    const a=starts[i],b=ends[i],toks=x.t.split(/\s+/).filter(Boolean),w=toks.map(t=>t.length+1);
+    const inner=[];if(ok)P.forEach((p,k)=>{if(!used.has(k)&&a+0.6<p[0]&&p[0]<b-0.6)inner.push(k)});
+    let pieces;
+    if(inner.length&&toks.length>inner.length){
+      const pt=inner.reduce((s,k)=>s+pd[k],0),spt=(b-a)-pt,sw=w.reduce((s,v)=>s+v,0),cut=[];
+      inner.forEach(k=>{
+        const ts=P[k][0]-a-inner.filter(q=>q<k).reduce((s,q)=>s+pd[q],0),target=ts/spt*sw;let c=0;
+        for(let n=0;n<toks.length;n++){c+=w[n];if(c>=target){cut.push(n+1);break}}
+      });
+      const bnd=[0,...cut.map(c=>Math.min(Math.max(c,1),toks.length-1)),toks.length];
+      pieces=[];let cur=a;
+      for(let n=0;n<bnd.length-1;n++){const pe=n<inner.length?P[inner[n]][0]:b;pieces.push([bnd[n],bnd[n+1],cur,pe]);if(n<inner.length)cur=P[inner[n]][1]}
+    }else pieces=[[0,toks.length,a,b]];
+    const words=[];
+    pieces.forEach(([lo,hi,s,e])=>{if(hi<=lo)return;const ww=w.slice(lo,hi),sw=ww.reduce((q,v)=>q+v,0);let t=s;
+      for(let n=lo;n<hi;n++){words.push([toks[n],+t.toFixed(2)]);t+=(e-s)*w[n]/sw}});
+    out.push({b:x.b,br:x.br,w:words});
+  });
+  out.score=score;return out;
+}
+function alignBest(x,sr,lines){let best=null;for(const D of [9,11,13,15,17,19]){const o=align(x,sr,lines,D);if(!best||o.score<best.score)best=o;}return best}
+
+const $=id=>document.getElementById(id),audio=$("audio"),box=$("box"),btn=$("play"),bar=$("bar");
+const PLAY='<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>',PAUSE='<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+btn.innerHTML=PLAY;
+const fmt=s=>{s=Math.max(0,s|0);return(s/60|0)+":"+String(s%60).padStart(2,"0")};
+const folder=new URLSearchParams(location.search).get("s");
+const fail=m=>{box.innerHTML='<p class="note"></p>';box.firstChild.textContent=m};
+let words=[],active=-1;
+async function init(){
+ if(!folder)return fail("No script selected. Go back to All scripts.");
+ const base="scripts/"+encodeURIComponent(folder)+"/";
+ fetch("scripts.txt?"+Date.now()).then(r=>r.text()).then(t=>{
+  const m=t.split(/\r?\n/).find(l=>l.split("|")[0].trim()===folder);
+  const ttl=m?m.slice(m.indexOf("|")+1).trim():folder;$("title").textContent=ttl;document.title=ttl}).catch(()=>{$("title").textContent=folder});
+ let txt,ab;
+ try{
+  const [a,b]=await Promise.all([fetch(base+"script.txt?"+Date.now()),fetch(base+"audio.mp3")]);
+  if(!a.ok||!b.ok)throw 0;txt=await a.text();ab=await b.arrayBuffer();
+ }catch(e){return fail("Could not load script.txt / audio.mp3 from folder: "+folder+". Open this page from your live link (not by double-clicking the file), and check the folder name.")}
+ audio.src=URL.createObjectURL(new Blob([ab],{type:"audio/mpeg"}));
+ await new Promise(r=>{if(audio.readyState>=1)r();else audio.addEventListener("loadedmetadata",r,{once:true});audio.addEventListener("error",r,{once:true})});
+ $("tot").textContent=fmt(audio.duration||0);
+ const lines=parseScript(txt);let data;
+ try{
+  const ctx=new(window.AudioContext||window.webkitAudioContext)();
+  const buf=await ctx.decodeAudioData(ab.slice(0));
+  data=alignBest(buf.getChannelData(0),buf.sampleRate,lines);ctx.close&&ctx.close();
+ }catch(e){data=align(new Float32Array(Math.max(1000,Math.round((audio.duration||60)*1000))).fill(1),1000,lines,13)}
+ box.innerHTML="";
+ data.forEach(l=>{const d=document.createElement("div");d.className="l"+(l.b?" b":"")+(l.br?" br":"");
+  l.w.forEach(([t,s])=>{const e=document.createElement("span");e.className="w";e.textContent=t;
+   e.onclick=()=>{audio.currentTime=s;audio.play()};d.append(e," ");words.push({el:e,s})});box.append(d)});
+ btn.disabled=false;
+}
+function update(){
+ const t=audio.currentTime;let idx=-1;
+ for(let i=0;i<words.length;i++){if(words[i].s<=t)idx=i;else break}
+ if(idx!==active){
+  words.forEach((w,i)=>{w.el.classList.toggle("done",i<idx);w.el.classList.toggle("now",i===idx)});active=idx;
+  if(idx>=0){const e=words[idx].el,r=e.getBoundingClientRect(),b=box.getBoundingClientRect();box.scrollTop+=r.top-b.top-box.clientHeight/2+r.height/2}
+ }
+ $("cur").textContent=fmt(t);
+ if(audio.duration){const p=t/audio.duration*1000;bar.value=p;bar.style.setProperty("--p",p/10+"%")}
+}
+const loop=()=>{update();if(!audio.paused)requestAnimationFrame(loop)};
+audio.addEventListener("play",()=>{btn.innerHTML=PAUSE;btn.setAttribute("aria-label","Pause audio");loop()});
+audio.addEventListener("pause",()=>{btn.innerHTML=PLAY;btn.setAttribute("aria-label","Play audio")});
+audio.addEventListener("ended",()=>{words.forEach(w=>{w.el.classList.add("done");w.el.classList.remove("now")})});
+audio.addEventListener("seeked",update);
+btn.onclick=()=>audio.paused?audio.play():audio.pause();
+bar.oninput=()=>{if(audio.duration)audio.currentTime=bar.value/1000*audio.duration};
+init();
+</script></body></html>
