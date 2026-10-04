@@ -2,4 +2,4 @@
 # Add "| wide" at the end for normal 16:9 videos. Without it, videos show as vertical (reels).
 # Serial numbers (01, 02, 03...) come from the order of the lines. Newest goes at the BOTTOM of this file and shows at the TOP of the website.
 # Example (remove the # to use it):
-# AI Namma Job-ah Eduthukkuma? | https://drive.google.com/file/d/YOUR_FILE_ID/view?usp=sharing
+# AI Namma Job-ah Eduthukkuma? | https://drive.google.com/file/d/17ISpqysNWm3O2inChgCE_tSlMMnzPNtb/view?usp=sharing | wide
