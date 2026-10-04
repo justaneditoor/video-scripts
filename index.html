@@ -1,42 +1,10 @@
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Video Scripts</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,800&display=swap" rel="stylesheet">
-<style>
-:root{--ink:#0b1033;--blue:#2c4bff;--sky:#cfe0ff;--card:#fbfaf6;--tang:#ff7a29;--peach:#ffe2cc}
-*{box-sizing:border-box;margin:0}
-body{font-family:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);background:var(--blue);min-height:100vh;
- display:flex;justify-content:center;padding:clamp(12px,3vw,40px);position:relative;overflow-x:hidden}
-body::before{content:"";position:fixed;left:-12vmax;top:8vh;width:34vmax;height:34vmax;border-radius:50%;background:var(--tang);z-index:0}
-body::after{content:"";position:fixed;right:0;bottom:0;width:60vw;height:38vh;background:var(--sky);clip-path:polygon(0 38%,100% 0,100% 100%,0 100%);z-index:0}
-main{position:relative;z-index:1;width:100%;max-width:900px;display:flex;flex-direction:column;gap:clamp(14px,2.4vw,24px)}
-.card{background:var(--card);border:3px solid var(--ink);border-radius:26px;box-shadow:8px 8px 0 var(--ink)}
-:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
-@media(max-width:560px){.card{box-shadow:5px 5px 0 var(--ink);border-radius:20px}}
-
-header{padding:clamp(18px,3.4vw,34px)}
-h1{font-size:clamp(2rem,6vw,3.4rem);font-weight:800;line-height:1.05}
-#list{display:flex;flex-direction:column;gap:clamp(12px,2vw,18px)}
-.row{display:flex;align-items:center;gap:clamp(12px,2.4vw,22px);padding:clamp(12px,2vw,18px);text-decoration:none;color:inherit;transition:transform .1s,box-shadow .1s}
-.row:hover{transform:translate(-2px,-2px);box-shadow:10px 10px 0 var(--ink)}
-.row:active{transform:translate(4px,4px);box-shadow:2px 2px 0 var(--ink)}
-.num{flex:none;min-width:clamp(56px,9vw,76px);height:clamp(56px,9vw,76px);display:grid;place-items:center;border:3px solid var(--ink);border-radius:18px;
- background:var(--tang);box-shadow:4px 4px 0 var(--ink);font-weight:800;font-size:clamp(1.3rem,3vw,1.9rem);padding:0 10px}
-.ttl{font-weight:800;font-size:clamp(1.15rem,2.8vw,1.7rem);line-height:1.2}
-.msg{padding:24px;font-size:1.2rem;font-weight:500}
-</style></head><body><main>
-<header class="card"><h1>Video Scripts</h1></header>
-<div id="list"></div>
-</main>
-<script>
-fetch("scripts.txt?"+Date.now()).then(r=>{if(!r.ok)throw 0;return r.text()}).then(t=>{
- const L=t.split(/\r?\n/).map(l=>l.trim()).filter(l=>l&&!l.startsWith("#")&&l.includes("|"))
-  .map(l=>{const i=l.indexOf("|");return{f:l.slice(0,i).trim(),t:l.slice(i+1).trim()}});
- const box=document.getElementById("list");
- if(!L.length){box.innerHTML='<div class="card msg">No scripts yet.</div>';return}
- L.map((s,i)=>({...s,n:i+1})).reverse().forEach(s=>{
-  const a=document.createElement("a");a.className="card row";a.href="player.html?s="+encodeURIComponent(s.f);
-  const n=document.createElement("span");n.className="num";n.textContent=String(s.n).padStart(2,"0");
-  const h=document.createElement("span");h.className="ttl";h.textContent=s.t;a.append(n,h);box.append(a)});
-}).catch(()=>{document.getElementById("list").innerHTML='<div class="card msg">Could not load scripts.txt. Open this page from your live GitHub link, not by double-clicking the file.</div>'});
-</script></body></html>
+<link rel="stylesheet" href="style.css"><title>Video Hub</title></head><body>
+<main class="full">
+<header class="card"><h1>Video Hub</h1></header>
+<div class="hub">
+ <a class="card big o" href="videos.html"><b>Final Videos</b><span>Watch the finished edits</span></a>
+ <a class="card big s" href="scripts.html"><b>Video Scripts</b><span>Read along with the voice-over</span></a>
+</div>
+</main></body></html>

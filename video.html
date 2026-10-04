@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css"><title>Video</title></head><body>
+<main>
+<a class="back" href="videos.html">&larr; All videos</a>
+<header class="card"><h1 id="title">Loading...</h1></header>
+<div class="card" id="res"></div>
+</main>
+<script src="lib.js"></script>
+<script>
+const n=+new URLSearchParams(location.search).get("n");
+readList("videos.txt").then(rows=>{
+ const r=rows[n-1];if(!r||!r[1]){$("title").textContent="Video not found";return}
+ $("title").textContent=r[0];document.title=r[0];$("res").append(buildEmbed(r[1],r[2]==="wide"));
+}).catch(()=>{$("title").textContent="Could not load videos.txt. Open this page from your live link."});
+</script></body></html>
